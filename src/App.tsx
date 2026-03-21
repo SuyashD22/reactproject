@@ -1,7 +1,8 @@
 import React, { useState, useEffect, createContext } from 'react';
-import HomePage from './pages/HomePage';
-import DetailsPage from './pages/DetailsPage';
-import SavedPage from './pages/SavedPage';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import HomePage from './pages/HomePage.tsx';
+import DetailsPage from './pages/DetailsPage.tsx';
+import SavedPage from './pages/SavedPage.tsx';
 import './App.css';
 
 type PageType = 'home' | 'details' | 'saved';
@@ -19,47 +20,48 @@ interface PhotosContextType {
 export const UserContext = createContext<UserContextType | undefined>(undefined);
 export const PhotosContext = createContext<PhotosContextType | undefined>(undefined);
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [userName, setUserName] = useState('');
-  const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [savedPhotos, setSavedPhotos] = useState<Set<string>>(new Set());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    if (userName && currentPage === 'home') {
-      setCurrentPage('details');
+    if (userName && location.pathname === '/') {
+      navigate('/details');
     }
-  }, [userName, currentPage]);
+  }, [userName, location.pathname, navigate]);
+
+  // Redirect to home if no userName on protected pages
+  useEffect(() => {
+    if (!userName && location.pathname !== '/') {
+      navigate('/');
+    }
+  }, [userName, location.pathname, navigate]);
 
   const handleNavigation = (page: PageType) => {
-    setCurrentPage(page);
+    const path = page === 'home' ? '/' : `/${page}`;
+    navigate(path);
     setIsMenuOpen(false);
   };
 
   const getPageDisplayName = () => {
-    switch (currentPage) {
-      case 'home':
+    switch (location.pathname) {
+      case '/':
         return 'Home';
-      case 'details':
+      case '/details':
         return 'Details';
-      case 'saved':
+      case '/saved':
         return 'Saved';
       default:
         return 'Home';
     }
   };
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'home':
-        return <HomePage />;
-      case 'details':
-        return <DetailsPage />;
-      case 'saved':
-        return <SavedPage />;
-      default:
-        return <HomePage />;
-    }
+  const isCurrentPage = (page: PageType) => {
+    if (page === 'home') return location.pathname === '/';
+    return location.pathname === `/${page}`;
   };
 
   return (
@@ -84,29 +86,41 @@ const App: React.FC = () => {
               <div className={`nav-links ${isMenuOpen ? 'open' : ''}`}>
                 <button
                   onClick={() => handleNavigation('home')}
-                  className={`nav-link ${currentPage === 'home' ? 'active' : ''}`}
+                  className={`nav-link ${isCurrentPage('home') ? 'active' : ''}`}
                 >
                   Home
                 </button>
                 <button
                   onClick={() => handleNavigation('details')}
-                  className={`nav-link ${currentPage === 'details' ? 'active' : ''}`}
+                  className={`nav-link ${isCurrentPage('details') ? 'active' : ''}`}
                 >
                   Details
                 </button>
                 <button
                   onClick={() => handleNavigation('saved')}
-                  className={`nav-link ${currentPage === 'saved' ? 'active' : ''}`}
+                  className={`nav-link ${isCurrentPage('saved') ? 'active' : ''}`}
                 >
                   Saved
                 </button>
               </div>
             </nav>
           )}
-          {renderPage()}
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/details" element={<DetailsPage />} />
+            <Route path="/saved" element={<SavedPage />} />
+          </Routes>
         </div>
       </PhotosContext.Provider>
     </UserContext.Provider>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 };
 
